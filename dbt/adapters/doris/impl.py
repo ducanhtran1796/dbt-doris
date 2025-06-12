@@ -38,7 +38,7 @@ from typing import (
 )
 
 import agate
-import dbt.exceptions
+import dbt_common.exceptions
 from dbt.adapters.base.impl import _expect_row_value, catch_as_completed
 from dbt.adapters.base.relation import InformationSchema, BaseRelation
 from dbt.adapters.doris.column import DorisColumn
@@ -46,10 +46,10 @@ from dbt.adapters.doris.connections import DorisConnectionManager
 from dbt.adapters.doris.relation import DorisRelation
 from dbt.adapters.protocol import AdapterConfig
 from dbt.adapters.sql.impl import LIST_RELATIONS_MACRO_NAME, LIST_SCHEMAS_MACRO_NAME
-from dbt.clients.agate_helper import table_from_rows
+from dbt_common.clients.agate_helper import table_from_rows
 from dbt.contracts.graph.manifest import Manifest
-from dbt.contracts.relation import RelationType
-from dbt.utils import executor
+from dbt.adapters.contracts.relation import RelationType
+from dbt_common.utils import executor
 from dbt.adapters.doris.doris_column_item import DorisColumnItem
 
 
@@ -74,6 +74,7 @@ class DorisConfig(AdapterConfig):
     partition_by_init: List[str]
     distributed_by: Tuple[str]
     buckets: int
+    is_auto_partition: bool
     properties: Dict[str, str]
 
 
@@ -123,7 +124,7 @@ class DorisAdapter(SQLAdapter):
         relations = []
         for row in results:
             if len(row) != 4:
-                raise dbt.exceptions.DbtRuntimeError(
+                raise dbt_common.exceptions.DbtRuntimeError(
                     f"Invalid value from 'show table extended ...', "
                     f"got {len(row)} values, expected 4"
                 )
@@ -188,7 +189,7 @@ class DorisAdapter(SQLAdapter):
             manifest: Manifest,
     ) -> agate.Table:
         if len(schemas) != 1:
-            dbt.exceptions.raise_compiler_error(
+            raise_compiler_error(
                 f"Expected only one schema in Doris _get_one_catalog, found " f"{schemas}"
             )
 

@@ -18,6 +18,7 @@ This adapter plugin follows [semantic versioning](https://semver.org/). The firs
  ## Getting Started
 
  #### Setting up Locally
+- run `pip install --only-binary :all: typed-ast==1.5.5`
 - run `pip install -r dev-requirements.txt`.
 - cd directory into the `dbt-core` you'd like to be testing against and run `make dev`.
 

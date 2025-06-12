@@ -21,7 +21,7 @@
 from dataclasses import dataclass, field
 
 from dbt.adapters.base.relation import BaseRelation, Policy
-from dbt.exceptions import DbtRuntimeError
+from dbt_common.exceptions import DbtRuntimeError
 
 
 @dataclass

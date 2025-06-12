@@ -24,11 +24,11 @@ from typing import ContextManager, Optional, Union
 
 import mysql.connector
 
-from dbt import exceptions
-from dbt.adapters.base import Credentials
+from dbt.adapters import exceptions
+from dbt_common.exceptions import DbtRuntimeError, DbtDatabaseError
 from dbt.adapters.sql import SQLConnectionManager
-from dbt.contracts.connection import AdapterResponse, Connection, ConnectionState
-from dbt.events import AdapterLogger
+from dbt.adapters.contracts.connection import AdapterResponse, Connection, Credentials
+from dbt.adapters.events.logging import AdapterLogger
 
 logger = AdapterLogger("doris")
 
@@ -56,7 +56,7 @@ class DorisCredentials(Credentials):
 
     def __post_init__(self):
         if self.database is not None and self.database != self.schema:
-            raise exceptions.DbtRuntimeError(
+            raise DbtRuntimeError(
                 f"    schema: {self.schema} \n"
                 f"    database: {self.database} \n"
                 f"On Doris, database must be omitted or have the same value as"
@@ -132,12 +132,12 @@ class DorisConnectionManager(SQLConnectionManager):
             yield
         except mysql.connector.DatabaseError as e:
             logger.debug(f"Doris database error: {e}, sql: {sql}")
-            raise exceptions.DbtDatabaseError(str(e)) from e
+            raise DbtDatabaseError(str(e)) from e
         except Exception as e:
             logger.debug(f"Error running SQL: {sql}")
-            if isinstance(e, exceptions.DbtRuntimeError):
+            if isinstance(e, DbtRuntimeError):
                 raise e
-            raise exceptions.DbtRuntimeError(str(e)) from e
+            raise DbtRuntimeError(str(e)) from e
 
     @classmethod
     def begin(self):

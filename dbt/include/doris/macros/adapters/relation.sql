@@ -24,11 +24,12 @@
 {% macro doris__partition_by() -%}
   {% set cols = config.get('partition_by', validator=validation.any[list, basestring]) %}
   {% set partition_type = config.get('partition_type', 'RANGE') %}
+  {% set is_auto_partition = config.get('is_auto_partition', false) %}
   {% if cols is not none %}
       {%- if cols is string -%}
         {%- set cols = [cols] -%}
       {%- endif -%}
-    PARTITION BY {{ partition_type }} (
+  {% if is_auto_partition is true %} AUTO {%- endif -%} PARTITION BY {{ partition_type }} (
       {% for col in cols %}
         {{ col }}{% if not loop.last %},{% endif %}
       {% endfor %}
