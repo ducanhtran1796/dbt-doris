@@ -29,8 +29,8 @@
       {%- if cols is string -%}
         {%- set cols = [cols] -%}
       {%- endif -%}
-  {%- if is_auto_partition is true -%} AUTO {%- endif -%}
-  PARTITION BY {{ partition_type }} (
+  {% if is_auto_partition is true %} AUTO PARTITION BY {% else %} PARTITION BY {% endif %}
+  {{ partition_type }} (
       {% for col in cols %}
         {{ col }}{% if not loop.last %},{% endif %}
       {% endfor %}
