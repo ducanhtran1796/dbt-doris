@@ -27,7 +27,7 @@
   {% set to_drop = [] %}
   {#-- append or no unique key --#}
 
-  {% set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change'), default='ignore') %}
+  {% set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change'), default='fail') %}
 
   {% if not unique_key or strategy == 'append'  %}
         {#-- create table first --#}
