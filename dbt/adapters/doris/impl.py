@@ -203,6 +203,41 @@ class DorisAdapter(SQLAdapter):
         # and might even be the SQL standard's intention.
         return f"{add_to} + interval {number} {interval}"
 
+    def alter_column_type(self, relation, column_name, new_column_type):
+        """Alter column type in Doris."""
+        relation_name = self._make_relation_name_for_query(relation)
+        self.execute_macro(
+            "doris__alter_column_type",
+            kwargs={"relation": relation_name, "column_name": column_name, "new_column_type": new_column_type}
+        )
+
+    def add_column(self, relation, column_name, column_type):
+        """Add a column to Doris table."""
+        relation_name = self._make_relation_name_for_query(relation)
+        self.execute_macro(
+            "doris__add_column",
+            kwargs={"relation": relation_name, "column_name": column_name, "column_type": column_type}
+        )
+
+    def drop_column(self, relation, column_name):
+        """Drop column from Doris table."""
+        relation_name = self._make_relation_name_for_query(relation)
+        self.execute_macro(
+            "doris__drop_column",
+            kwargs={"relation": relation_name, "column_name": column_name}
+        )
+
+    def rename_column(self, relation, old_column_name, new_column_name):
+        """Rename column in Doris table."""
+        relation_name = self._make_relation_name_for_query(relation)
+        self.execute_macro(
+            "doris__rename_column",
+            kwargs={
+                "relation": relation_name,
+                "old_column_name": old_column_name,
+                "new_column_name": new_column_name
+            }
+        )
 
     @classmethod
     def render_raw_columns_constraints(cls, raw_columns: Dict[str, Dict[str, Any]]) -> List:
