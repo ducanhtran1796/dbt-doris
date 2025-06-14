@@ -29,5 +29,9 @@ class DorisColumn(Column):
     def quoted(self) -> str:
         return "`{}`".format(self.column)
 
+    @classmethod
+    def string_type(cls, size: int) -> str:
+        return "VARCHAR({})".format(size)
+
     def __repr__(self) -> str:
         return f"<DorisColumn {self.name} ({self.data_type})>"
