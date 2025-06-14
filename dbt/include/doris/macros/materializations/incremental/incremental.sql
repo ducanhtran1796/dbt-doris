@@ -28,72 +28,71 @@
   {#-- append or no unique key --#}
 
   {% if not unique_key or strategy == 'append'  %}
-        {#-- create table first --#}
-        {% if existing_relation is none  %}
-            {% set build_sql = doris__create_table_as(False, target_relation, sql) %}
-        {% elif existing_relation.is_view or full_refresh_mode %}
-            {#-- backup table is new table ,exchange table backup and old table #}
-            {% set backup_identifier = existing_relation.identifier ~ "__dbt_backup" %}
-            {% set backup_relation = existing_relation.incorporate(path={"identifier": backup_identifier}) %}
-            {% do adapter.drop_relation(backup_relation) %} {#-- likes 'drop table if exists ... ' --#}
-            {% set run_sql = doris__create_table_as(False, backup_relation, sql) %}
-            {% call statement("run_sql") %}
-                {{ run_sql }}
-            {% endcall %}
-            {% do exchange_relation(target_relation, backup_relation, True) %}
-            {% set build_sql = "select 'hello doris'" %}
-        {#-- append data --#}
-        {% else %}
-            {% do to_drop.append(tmp_relation) %}
-            {% do run_query(create_table_as(True, tmp_relation, sql)) %}
-            {% do handle_schema_evolution(existing_relation, full_refresh_mode, tmp_relation) %}
-            {% set build_sql = tmp_insert(tmp_relation, target_relation, unique_key=none) %}
-        {% endif %}
+    {#-- create table first --#}
+    {% if existing_relation is none  %}
+      {% set build_sql = doris__create_table_as(False, target_relation, sql) %}
+    {% elif existing_relation.is_view or full_refresh_mode %}
+      {#-- backup table is new table ,exchange table backup and old table #}
+      {% set backup_identifier = existing_relation.identifier ~ "__dbt_backup" %}
+      {% set backup_relation = existing_relation.incorporate(path={"identifier": backup_identifier}) %}
+      {% do log("Drop relation: " ~ backup_relation, info=True) %}
+      {% do adapter.drop_relation(backup_relation) %} {#-- likes 'drop table if exists ... ' --#}
+      {% set run_sql = doris__create_table_as(False, backup_relation, sql) %}
+      {% call statement("run_sql") %}
+        {{ run_sql }}
+      {% endcall %}
+      {% do exchange_relation(target_relation, backup_relation, True) %}
+      {% set build_sql = "select 'hello doris'" %}
+      {#-- append data --#}
+      {% else %}
+      {% do to_drop.append(tmp_relation) %}
+      {% do run_query(create_table_as(True, tmp_relation, sql)) %}
+      {% do handle_schema_evolution(existing_relation, full_refresh_mode, tmp_relation) %}
+      {% set build_sql = tmp_insert(tmp_relation, target_relation, unique_key=none) %}
+    {% endif %}
   {#-- insert overwrite --#}
   {% elif strategy == 'insert_overwrite' %}
-        {#-- create table first --#}
-        {% if existing_relation is none  %}
-            {% set build_sql = doris__create_unique_table_as(False, target_relation, sql) %}
-        {#-- insert data refresh --#}
-        {% elif existing_relation.is_view or full_refresh_mode %}
-            {#-- backup table is new table ,exchange table backup and old table #}
-            {% set backup_identifier = existing_relation.identifier ~ "__dbt_backup" %}
-            {% set backup_relation = existing_relation.incorporate(path={"identifier": backup_identifier}) %}
-            {% do adapter.drop_relation(backup_relation) %} {#-- likes 'drop table if exists ... ' --#}
-            {% set run_sql = doris__create_unique_table_as(False, backup_relation, sql) %}
-            {% call statement("run_sql") %}
-                {{ run_sql }}
-            {% endcall %}
-            {% do exchange_relation(target_relation, backup_relation, True) %}
-            {% set build_sql = "select 'hello doris'" %}
-        {#-- append data --#}
-        {% else %}
-          {#-- check doris unique table  --#}
-          {% if not is_unique_model(target_relation) %}
-                {% do exceptions.raise_compiler_error("doris table:"~ target_relation ~ ", model must be 'UNIQUE'" ) %}
-          {% endif %}
-          {#-- create temp duplicate table for this incremental task  --#}
-          {% do run_query(create_table_as(True, tmp_relation, sql)) %}
-          {% do handle_schema_evolution(existing_relation, full_refresh_mode, tmp_relation) %}
-          {% do to_drop.append(tmp_relation) %}
-          {% do adapter.expand_target_column_types(
-                 from_relation=tmp_relation,
-                 to_relation=target_relation) %}
-          {% set build_sql = tmp_insert(tmp_relation, target_relation, unique_key=unique_key) %}
-        {% endif %}
+    {#-- create table first --#}
+    {% if existing_relation is none  %}
+      {% set build_sql = doris__create_unique_table_as(False, target_relation, sql) %}
+    {#-- insert data refresh --#}
+    {% elif existing_relation.is_view or full_refresh_mode %}
+      {#-- backup table is new table ,exchange table backup and old table #}
+      {% set backup_identifier = existing_relation.identifier ~ "__dbt_backup" %}
+      {% set backup_relation = existing_relation.incorporate(path={"identifier": backup_identifier}) %}
+      {% do adapter.drop_relation(backup_relation) %} {#-- likes 'drop table if exists ... ' --#}
+      {% set run_sql = doris__create_unique_table_as(False, backup_relation, sql) %}
+      {% call statement("run_sql") %}
+        {{ run_sql }}
+      {% endcall %}
+      {% do exchange_relation(target_relation, backup_relation, True) %}
+      {% set build_sql = "select 'hello doris'" %}
+      {#-- append data --#}
+    {% else %}
+      {#-- check doris unique table  --#}
+      {% if not is_unique_model(target_relation) %}
+        {% do exceptions.raise_compiler_error("doris table:"~ target_relation ~ ", model must be 'UNIQUE'" ) %}
+      {% endif %}
+      {#-- create temp duplicate table for this incremental task  --#}
+      {% do run_query(create_table_as(True, tmp_relation, sql)) %}
+      {% do handle_schema_evolution(existing_relation, full_refresh_mode, tmp_relation) %}
+      {% do to_drop.append(tmp_relation) %}
+      {% do adapter.expand_target_column_types(from_relation=tmp_relation, to_relation=target_relation) %}
+      {% set build_sql = tmp_insert(tmp_relation, target_relation, unique_key=unique_key) %}
+      {% endif %}
   {% else %}
-          {#-- never  --#}
+    {#-- never  --#}
   {% endif %}
 
   {% call statement("main") %}
-      {{ build_sql }}
+    {{ build_sql }}
   {% endcall %}
 
   {#--  {% do persist_docs(target_relation, model) %}  #}
   {{ run_hooks(post_hooks, inside_transaction=True) }}
   {% do adapter.commit() %}
   {% for rel in to_drop %}
-      {% do doris__drop_relation(rel) %}
+    {% do doris__drop_relation(rel) %}
   {% endfor %}
   {{ run_hooks(post_hooks, inside_transaction=False) }}
   {{ return({'relations': [target_relation]}) }}

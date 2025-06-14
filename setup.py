@@ -19,7 +19,7 @@ setup(
     include_package_data=True,
     install_requires=[
         f"dbt-core>={dbt_core_version}",
-        "mysql-connector-python>=8.0.0,<8.1",
+        "mysql-connector-python==9.3.0",
         "urllib3~=1.0",
     ],
     python_requires=">=3.7.2",
