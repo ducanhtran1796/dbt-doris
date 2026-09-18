@@ -101,18 +101,34 @@
   {% endif %}
 {%- endmacro %}
 
-{% macro doris__properties() -%}
-  {% set properties = config.get('properties', validator=validation.any[dict]) %}
+{#--
+  Properties Doris only accepts on a UNIQUE KEY table. Carrying them onto a
+  DUPLICATE KEY table fails with "sequence column only support UNIQUE_KEYS."
+--#}
+{% macro doris__unique_only_properties() %}
+  {{ return(['function_column.sequence_col', 'function_column.sequence_type']) }}
+{% endmacro %}
+
+{% macro doris__properties(exclude_unique_only=false) -%}
+  {% set configured = config.get('properties', validator=validation.any[dict]) %}
   {% set replice_num =  config.get('replication_num') %}
+  {% set unique_only = doris__unique_only_properties() %}
+
+  {#-- build a copy: the dict from config is shared, mutating it leaks across calls --#}
+  {% set properties = {} %}
+  {% if configured is not none %}
+    {% for key, value in configured.items() %}
+      {% if not (exclude_unique_only and key in unique_only) %}
+        {% do properties.update({key: value}) %}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
 
   {% if replice_num is not none %}
-    {% if properties is none %}
-      {% set properties = {} %}
-    {% endif %}
     {% do properties.update({'replication_num': replice_num}) %}
   {% endif %}
 
-  {% if properties is not none %}
+  {% if properties %}
     PROPERTIES (
         {% for key, value in properties.items() %}
           "{{ key }}" = "{{ value }}"{% if not loop.last %},{% endif %}

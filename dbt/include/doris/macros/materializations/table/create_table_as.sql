@@ -27,7 +27,9 @@
     {{ doris__table_comment()}}
     {{ doris__partition_by() }}
     {{ doris__distributed_by() }}
-    {{ doris__properties() }} as {{ doris__table_colume_type(sql) }};
+    {#-- this macro always builds a DUPLICATE KEY table, so a temporary staging
+       relation must not inherit UNIQUE-only properties from the model config --#}
+    {{ doris__properties(exclude_unique_only=temporary) }} as {{ doris__table_colume_type(sql) }};
 
 {%- endmacro %}
 
