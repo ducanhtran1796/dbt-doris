@@ -41,6 +41,16 @@ class DorisCredentials(Credentials):
     password: str = ""
     database: Optional[str] = None
     schema: Optional[str] = None
+    # Use mysql-connector's pure-Python implementation.
+    #
+    # Defaults to True because the bundled C extension sends statements through a
+    # fixed NET_BUFFER_LENGTH (8192) buffer, and Doris' FE does not reassemble the
+    # split packets: any statement larger than 8KB arrives truncated mid-token and
+    # fails to parse, e.g.
+    #     no viable alternative at input 'CAST(JSONJSON(JSON'(line 155, pos 20)
+    # Wide models (many columns / long CTEs) cross 8KB easily. Set this to false to
+    # opt back into the faster C extension when every statement stays under 8KB.
+    use_pure: bool = True
 
 
     @property
@@ -48,7 +58,7 @@ class DorisCredentials(Credentials):
         return "doris"
 
     def _connection_keys(self):
-        return "host", "port", "user", "schema"
+        return "host", "port", "user", "schema", "use_pure"
 
     @property
     def unique_field(self) -> str:
@@ -81,6 +91,7 @@ class DorisConnectionManager(SQLConnectionManager):
             "buffered": True,
             "charset": "utf8",
             "get_warnings": True,
+            "use_pure": credentials.use_pure,
         }
 
         try:
